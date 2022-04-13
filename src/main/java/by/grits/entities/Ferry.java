@@ -4,11 +4,15 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class Ferry {
-  private int id;
   private final int max_capacity = 10;
+  private int id;
   private List<Car> cars;
   private boolean isFull;
   private boolean isEmpty;
+
+  public Ferry() {
+    cars = new CopyOnWriteArrayList<>();
+  }
 
   public boolean isEmpty() {
     return isEmpty;
@@ -16,10 +20,6 @@ public class Ferry {
 
   public void setEmpty(boolean empty) {
     isEmpty = empty;
-  }
-
-  public Ferry() {
-    cars = new CopyOnWriteArrayList<>();
   }
 
   public List<Car> getCars() {
