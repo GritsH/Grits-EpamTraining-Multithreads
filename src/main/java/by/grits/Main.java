@@ -22,6 +22,8 @@ public class Main {
 
     ExecutorService service = Executors.newFixedThreadPool(processors);
     service.execute(carGenerator);
+    service.execute(carGenerator);
+    service.execute(carDeleter);
     service.execute(carDeleter);
     service.shutdown();
     LOGGER.info(service.toString());

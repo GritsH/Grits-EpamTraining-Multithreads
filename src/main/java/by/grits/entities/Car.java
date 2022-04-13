@@ -6,6 +6,8 @@ public class Car {
   private int carSize;
   private boolean isLoaded;
 
+  public Car() {}
+
   public boolean isLoaded() {
     return isLoaded;
   }
@@ -13,8 +15,6 @@ public class Car {
   public void setLoaded(boolean loaded) {
     isLoaded = loaded;
   }
-
-  public Car() {}
 
   public int getCarID() {
     return carID;
