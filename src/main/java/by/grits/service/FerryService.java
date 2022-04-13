@@ -12,6 +12,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class FerryService {
+  private static final Logger LOGGER = LogManager.getLogger(FerryService.class);
   private final ReentrantLock reentrantLock = new ReentrantLock();
   private Condition condition = reentrantLock.newCondition();
   private List<Car> carsToLoad;
@@ -19,17 +20,15 @@ public class FerryService {
   private int carCounter = 0;
   private int carID = 0;
 
-  private static final Logger LOGGER = LogManager.getLogger(FerryService.class);
-
   public FerryService() {
     carsToLoad = new CopyOnWriteArrayList<>();
   }
 
   public void add(Car car) throws InterruptedException {
-    TimeUnit.SECONDS.sleep(1);
+    TimeUnit.SECONDS.sleep(6);
     reentrantLock.lock();
 
-    if (ferryCurrentCapacity == 0) {
+    if (ferryCurrentCapacity < car.getCarSize()) {
       condition.await();
     }
     if (ferryCurrentCapacity >= 0 && 10 - ferryCurrentCapacity + car.getCarSize() <= 10) {
@@ -48,33 +47,31 @@ public class FerryService {
       LOGGER.info("Current ferry capacity = " + ferryCurrentCapacity);
     }
     reentrantLock.unlock();
-
   }
 
   public void delete() throws InterruptedException {
+    TimeUnit.SECONDS.sleep(3);
     reentrantLock.lock();
-    if (ferryCurrentCapacity != 10){
-      condition.await();
+    if (ferryCurrentCapacity >= 2) {
+      condition.signal();
     }
-      if (ferryCurrentCapacity == 0) {
-        TimeUnit.SECONDS.sleep(1);
-        int buff = carCounter - 1;
-        if (ferryCurrentCapacity <= 10) {
-          Car car = carsToLoad.get(buff);
-          // for (Car car_ : carsToLoad) {
-          if (car.getCarType() == CarType.PASSENGER && car.isLoaded()) {
-            ferryCurrentCapacity = ferryCurrentCapacity + 1;
-            carsToLoad.remove(car);
-          }
-          if (car.getCarType() == CarType.TRUCK && car.isLoaded()) {
-            ferryCurrentCapacity = ferryCurrentCapacity + 2;
-            carsToLoad.remove(car);
-            carCounter--;
-          }
-          LOGGER.info("Car " + car.getCarID() + " was unloaded.");
-          // }
-        }
+    if (ferryCurrentCapacity < 2) {
+      Car car = carsToLoad.get(carCounter - carsToLoad.size());
+      if (car.getCarType() == CarType.PASSENGER && car.isLoaded()) {
+        ferryCurrentCapacity = ferryCurrentCapacity + 1;
+        carsToLoad.remove(car);
+        carCounter = carCounter - 1;
       }
+      if (car.getCarType() == CarType.TRUCK && car.isLoaded()) {
+        ferryCurrentCapacity = ferryCurrentCapacity + 2;
+        carsToLoad.remove(car);
+        carCounter = carCounter - 1;
+      }
+      LOGGER.info("------------------------------------------");
+      LOGGER.info("Car " + car.getCarID() + " was unloaded.");
+      LOGGER.info("Current ferry capacity = " + ferryCurrentCapacity);
+      LOGGER.info("------------------------------------------");
+    }
     reentrantLock.unlock();
   }
 }
