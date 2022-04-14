@@ -11,24 +11,25 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class FerryService {
-  private static final Logger LOGGER = LogManager.getLogger(FerryService.class);
+public class Ferry {
+  private static final Logger LOGGER = LogManager.getLogger(Ferry.class);
+  private int ferryCurrentCapacity = 10;
+  private int leftSpace = 0;
+  private int carCounter = 0;
+  private int carID = 0;
   private final ReentrantLock reentrantLock = new ReentrantLock();
   private Condition condition = reentrantLock.newCondition();
   private List<Car> carsToLoad;
-  private int ferryCurrentCapacity = 10;
-  private int carCounter = 0;
-  private int carID = 0;
 
-  public FerryService() {
+  public Ferry() {
     carsToLoad = new CopyOnWriteArrayList<>();
   }
 
-  public void add(Car car) throws InterruptedException {
+  public void load(Car car) throws InterruptedException {
     TimeUnit.SECONDS.sleep(6);
-    reentrantLock.lock();
 
-    if (ferryCurrentCapacity < car.getCarSize()) {
+    reentrantLock.lock();
+    if (leftSpace < car.getCarSize()) {
       condition.await();
     }
     if (ferryCurrentCapacity >= 0 && 10 - ferryCurrentCapacity + car.getCarSize() <= 10) {
@@ -45,17 +46,19 @@ public class FerryService {
       }
       LOGGER.info("Car " + car.getCarID() + " was loaded on ferry");
       LOGGER.info("Current ferry capacity = " + ferryCurrentCapacity);
+      leftSpace = ferryCurrentCapacity;
     }
     reentrantLock.unlock();
   }
 
-  public void delete() throws InterruptedException {
+  public void unload() throws InterruptedException {
     TimeUnit.SECONDS.sleep(3);
     reentrantLock.lock();
-    if (ferryCurrentCapacity >= 2) {
-      condition.signal();
+    if (ferryCurrentCapacity == 10) {
+      leftSpace = ferryCurrentCapacity;
+      condition.signalAll();
     }
-    if (ferryCurrentCapacity < 2) {
+    if (leftSpace < 2) {
       Car car = carsToLoad.get(carCounter - carsToLoad.size());
       if (car.getCarType() == CarType.PASSENGER && car.isLoaded()) {
         ferryCurrentCapacity = ferryCurrentCapacity + 1;
@@ -73,5 +76,9 @@ public class FerryService {
       LOGGER.info("------------------------------------------");
     }
     reentrantLock.unlock();
+  }
+
+  public int getCounter() {
+    return carCounter;
   }
 }

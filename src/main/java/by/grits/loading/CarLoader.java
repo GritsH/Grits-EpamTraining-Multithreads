@@ -1,16 +1,23 @@
-package by.grits.utils;
+package by.grits.loading;
 
 import by.grits.entities.Car;
 import by.grits.entities.CarType;
-import by.grits.service.FerryService;
+import by.grits.service.Ferry;
+import by.grits.utils.FileReader;
 
+import java.util.List;
 import java.util.Random;
+import java.util.concurrent.locks.ReentrantLock;
 
-public class CarGenerator implements Runnable {
-  private final FerryService ferryService;
+public class CarLoader implements Runnable {
+  private final Ferry ferry;
+  FileReader fileReader;
+  List<Integer> intTypes;
+  int i = 0;
+  ReentrantLock reentrantLock = new ReentrantLock();
 
-  public CarGenerator(FerryService ferryService) {
-    this.ferryService = ferryService;
+  public CarLoader(Ferry ferry) {
+    this.ferry = ferry;
   }
 
   @Override
@@ -29,7 +36,7 @@ public class CarGenerator implements Runnable {
       }
 
       try {
-        ferryService.add(car);
+        ferry.load(car);
       } catch (InterruptedException e) {
         e.printStackTrace();
       }
