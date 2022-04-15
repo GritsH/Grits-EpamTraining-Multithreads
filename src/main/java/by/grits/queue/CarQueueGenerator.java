@@ -11,16 +11,17 @@ import java.io.FileNotFoundException;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class CarQueueGenerator implements Runnable {
   private static final Logger LOGGER = LogManager.getLogger(CarUnloader.class);
 
   private final CarQueue carQueue;
-  private int carID;
+  private final AtomicInteger carID;
 
   public CarQueueGenerator(CarQueue carQueue) throws FileNotFoundException {
+    carID = new AtomicInteger(0);
     this.carQueue = carQueue;
-    carID = 0;
     FileReader fileReader = new FileReader();
     List<Integer> intTypes = fileReader.getCarsTypes("src/main/resources/InitFile.txt");
     for (int i : intTypes) {
@@ -31,8 +32,9 @@ public class CarQueueGenerator implements Runnable {
       } else {
         car.setCarSize(2);
       }
-      car.setCarID(carID++);
+      car.setCarID(carID.get());
       carQueue.addCarToQueue(car);
+      carID.incrementAndGet();
     }
   }
 
@@ -55,8 +57,9 @@ public class CarQueueGenerator implements Runnable {
         car.setCarType(CarType.PASSENGER);
         car.setCarSize(1);
       }
-      car.setCarID(carID++);
+      car.setCarID(carID.get());
       carQueue.addCarToQueue(car);
+      carID.incrementAndGet();
     }
   }
 }

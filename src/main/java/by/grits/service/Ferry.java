@@ -1,31 +1,30 @@
 package by.grits.service;
 
 import by.grits.entities.Car;
-import by.grits.state.FerryState;
 import by.grits.state.FerryStateType;
-import by.grits.state.LoadedState;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class Ferry {
   private static final Logger LOGGER = LogManager.getLogger(Ferry.class);
 
-  private FerryState state;
-  private FerryStateType ferryStateType;
   private static final Integer MAX_CAPACITY = 10;
   private static Ferry INSTANCE;
   private final ReentrantLock reentrantLock;
   private final Condition loadCondition;
   private final Condition unloadCondition;
   private final Queue<Car> cars;
+  // true - loading
+  // false - unloading
+  protected final AtomicReference<FerryStateType> state = new AtomicReference<>(FerryStateType.LOADED);
 
   private Ferry() {
-    state = new LoadedState();
     reentrantLock = new ReentrantLock();
     loadCondition = reentrantLock.newCondition();
     unloadCondition = reentrantLock.newCondition();
@@ -39,46 +38,25 @@ public class Ferry {
     return INSTANCE;
   }
 
-  public void setState(FerryState state){
-    this.state = state;
-  }
-
-  public FerryState getState() {
-    return state;
-  }
-
-  public void previousState(){
-    state.prev(this);
-  }
-  public void nextState(){
-    state.next(this);
-  }
-
-  public void printStatus(){
-    state.printStatus();
-  }
-
   public void load(Car car) throws InterruptedException {
     reentrantLock.lock();
     try {
-      int leftSpace = estimateLeftSpace();
-      if (leftSpace < car.getCarSize()) {
-//        nextState();
-//        printStatus();
-//
-//        nextState();
-//        printStatus();
-        ferryStateType = FerryStateType.LOADED;
-        unloadCondition.signal();
+      // unloading
+      while (state.get() != FerryStateType.LOADED) {
         loadCondition.await();
       }
-      //if(getState().equals(LoadedState.class)){
+      if (estimateLeftSpace() < car.getCarSize()) {
+        // set to load
+        state.set(FerryStateType.UNLOADED);
+        unloadCondition.signal();
+      } else {
         cars.add(car);
         car.setLoaded(true);
-        leftSpace = estimateLeftSpace();
         LOGGER.info("Car " + car.getCarID() + " was loaded on ferry");
-        LOGGER.info("Current ferry capacity = " + (leftSpace));
-      //}
+        LOGGER.info("Current ferry capacity = " + (estimateLeftSpace()));
+      }
+    } catch (InterruptedException e) {
+      LOGGER.warn("Something wrong");
     } finally {
       reentrantLock.unlock();
     }
@@ -87,16 +65,15 @@ public class Ferry {
   public void unload() throws InterruptedException {
     reentrantLock.lock();
     try {
+      // loading
+      while (state.get() == FerryStateType.LOADED) {
+        unloadCondition.await();
+      }
       int leftSpace = estimateLeftSpace();
       if (leftSpace == MAX_CAPACITY) {
-//        nextState();
-//        printStatus();
-//        nextState();
-//        printStatus();
-        ferryStateType = FerryStateType.UNLOADED;
+        state.set(FerryStateType.LOADED);
         loadCondition.signal();
-        unloadCondition.await();
-      } else if (ferryStateType == FerryStateType.LOADED){
+      } else {
         if (cars.element().isLoaded()) {
           LOGGER.info("------------------------------------------");
           LOGGER.info("Car " + cars.element().getCarID() + " was unloaded.");
