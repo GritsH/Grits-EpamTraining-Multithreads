@@ -36,19 +36,16 @@ public class Ferry {
   public void load(Car car) throws InterruptedException {
     reentrantLock.lock();
     try {
-      int occupiedSpace = updateOccupiedSpace();
-      int leftSpace = MAX_CAPACITY - occupiedSpace;
+      int leftSpace = estimateLeftSpace();
       if (leftSpace < car.getCarSize()) {
-        setLeftSpace(leftSpace);
+        //setLeftSpace(leftSpace);
         condition.await();
       }
-      if (occupiedSpace >= 0 && occupiedSpace + car.getCarSize() <= MAX_CAPACITY) {
-        cars.add(car);
-        car.setLoaded(true);
-        occupiedSpace = updateOccupiedSpace();
-        LOGGER.info("Car " + car.getCarID() + " was loaded on ferry");
-        LOGGER.info("Current ferry capacity = " + (MAX_CAPACITY - occupiedSpace));
-      }
+      cars.add(car);
+      car.setLoaded(true);
+      leftSpace = estimateLeftSpace();
+      LOGGER.info("Car " + car.getCarID() + " was loaded on ferry");
+      LOGGER.info("Current ferry capacity = " + (leftSpace));
     } catch (InterruptedException e) {
       LOGGER.warn("Something wrong");
     } finally {
@@ -59,18 +56,16 @@ public class Ferry {
   public void unload() throws InterruptedException {
     reentrantLock.lock();
     try {
-      int occupiedSpace = updateOccupiedSpace();
-      if (occupiedSpace == 0) {
-        setLeftSpace(MAX_CAPACITY);
+      int leftSpace = estimateLeftSpace();
+      if (leftSpace == MAX_CAPACITY) {
         condition.signal();
-      }
-      if (leftSpace < 2) {
+      }else {
         if (cars.element().isLoaded()) {
           LOGGER.info("------------------------------------------");
           LOGGER.info("Car " + cars.element().getCarID() + " was unloaded.");
           LOGGER.info(
               "Current ferry capacity = "
-                  + (MAX_CAPACITY - occupiedSpace + cars.element().getCarSize()));
+                  + (leftSpace + cars.element().getCarSize()));
           LOGGER.info("------------------------------------------");
         }
         cars.remove();
@@ -80,24 +75,15 @@ public class Ferry {
     }
   }
 
-  private int updateOccupiedSpace() {
+  private int estimateLeftSpace() {
     reentrantLock.lock();
     try {
       int occupiedSpace = 0;
       for (Car car : cars) {
         occupiedSpace = occupiedSpace + car.getCarSize();
       }
-      return occupiedSpace;
+      return MAX_CAPACITY - occupiedSpace;
     } finally {
-      reentrantLock.unlock();
-    }
-  }
-
-  private void setLeftSpace(int leftSpace){
-    reentrantLock.lock();
-    try{
-      this.leftSpace = leftSpace;
-    }finally{
       reentrantLock.unlock();
     }
   }
