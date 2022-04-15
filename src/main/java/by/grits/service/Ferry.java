@@ -15,15 +15,15 @@ public class Ferry {
   private static final Integer MAX_CAPACITY = 10;
   private static Ferry INSTANCE;
   private final ReentrantLock reentrantLock;
-  private final Condition condition;
+  private final Condition loadCondition;
+  private final Condition unloadCondition;
   private final Queue<Car> cars;
-  private int leftSpace;
 
   private Ferry() {
     reentrantLock = new ReentrantLock();
-    condition = reentrantLock.newCondition();
+    loadCondition = reentrantLock.newCondition();
+    unloadCondition = reentrantLock.newCondition();
     cars = new LinkedList<>();
-    leftSpace = MAX_CAPACITY;
   }
 
   public static Ferry getInstance() {
@@ -38,8 +38,8 @@ public class Ferry {
     try {
       int leftSpace = estimateLeftSpace();
       if (leftSpace < car.getCarSize()) {
-        // setLeftSpace(leftSpace);
-        condition.await();
+        unloadCondition.signal();
+        loadCondition.await();
       }
       cars.add(car);
       car.setLoaded(true);
@@ -58,7 +58,8 @@ public class Ferry {
     try {
       int leftSpace = estimateLeftSpace();
       if (leftSpace == MAX_CAPACITY) {
-        condition.signal();
+        loadCondition.signal();
+        unloadCondition.await();
       } else {
         if (cars.element().isLoaded()) {
           LOGGER.info("------------------------------------------");
