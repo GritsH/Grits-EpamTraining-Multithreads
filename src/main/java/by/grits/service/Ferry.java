@@ -46,8 +46,6 @@ public class Ferry {
       leftSpace = estimateLeftSpace();
       LOGGER.info("Car " + car.getCarID() + " was loaded on ferry");
       LOGGER.info("Current ferry capacity = " + (leftSpace));
-    } catch (InterruptedException e) {
-      LOGGER.warn("Something wrong");
     } finally {
       reentrantLock.unlock();
     }

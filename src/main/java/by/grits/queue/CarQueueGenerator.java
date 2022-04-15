@@ -2,7 +2,10 @@ package by.grits.queue;
 
 import by.grits.entities.Car;
 import by.grits.entities.CarType;
+import by.grits.loading.CarUnloader;
 import by.grits.utils.FileReader;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.FileNotFoundException;
 import java.util.List;
@@ -10,6 +13,8 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 public class CarQueueGenerator implements Runnable {
+  private static final Logger LOGGER = LogManager.getLogger(CarUnloader.class);
+
   private final CarQueue carQueue;
   private int carID;
 
@@ -37,7 +42,7 @@ public class CarQueueGenerator implements Runnable {
       try {
         TimeUnit.SECONDS.sleep(3);
       } catch (InterruptedException e) {
-        e.printStackTrace();
+        LOGGER.warn("Caught exception, could not put thread to sleep");
       }
       Car car = new Car();
       Random random = new Random();

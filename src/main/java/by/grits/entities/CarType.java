@@ -4,7 +4,7 @@ public enum CarType {
   PASSENGER(0),
   TRUCK(1);
 
-  int type;
+  final int type;
 
   CarType(int type) {
     this.type = type;
