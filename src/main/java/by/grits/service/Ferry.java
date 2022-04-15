@@ -1,84 +1,91 @@
 package by.grits.service;
 
 import by.grits.entities.Car;
-import by.grits.entities.CarType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.TimeUnit;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class Ferry {
   private static final Logger LOGGER = LogManager.getLogger(Ferry.class);
-  private int ferryCurrentCapacity = 10;
-  private int leftSpace = 0;
-  private int carCounter = 0;
-  private int carID = 0;
-  private final ReentrantLock reentrantLock = new ReentrantLock();
-  private Condition condition = reentrantLock.newCondition();
-  private List<Car> carsToLoad;
 
-  public Ferry() {
-    carsToLoad = new CopyOnWriteArrayList<>();
+  private static final Integer MAX_CAPACITY = 10;
+  private static Ferry INSTANCE;
+  private final ReentrantLock reentrantLock;
+  private final Condition condition;
+  private final Queue<Car> cars;
+
+  private Ferry() {
+    reentrantLock = new ReentrantLock();
+    condition = reentrantLock.newCondition();
+    cars = new LinkedList<>();
+  }
+
+  public static Ferry getInstance() {
+    if (INSTANCE == null) {
+      INSTANCE = new Ferry();
+    }
+    return INSTANCE;
   }
 
   public void load(Car car) throws InterruptedException {
-    TimeUnit.SECONDS.sleep(6);
-
     reentrantLock.lock();
-    if (leftSpace < car.getCarSize()) {
-      condition.await();
-    }
-    if (ferryCurrentCapacity >= 0 && 10 - ferryCurrentCapacity + car.getCarSize() <= 10) {
-
-      car.setCarID(carID++);
-      carsToLoad.add(car);
-      carCounter++;
-      car.setLoaded(true);
-      if (car.getCarSize() == 1) {
-        ferryCurrentCapacity = ferryCurrentCapacity - 1;
+    try {
+      int occupiedSpace = updateOccupiedSpace();
+      if (MAX_CAPACITY - occupiedSpace < car.getCarSize()) {
+        condition.await();
       }
-      if (car.getCarSize() == 2) {
-        ferryCurrentCapacity = ferryCurrentCapacity - 2;
+      if (occupiedSpace >= 0 && occupiedSpace + car.getCarSize() <= MAX_CAPACITY) {
+        cars.add(car);
+        car.setLoaded(true);
+        occupiedSpace = updateOccupiedSpace();
+        LOGGER.info("Car " + car.getCarID() + " was loaded on ferry");
+        LOGGER.info("Current ferry capacity = " + (MAX_CAPACITY - occupiedSpace));
       }
-      LOGGER.info("Car " + car.getCarID() + " was loaded on ferry");
-      LOGGER.info("Current ferry capacity = " + ferryCurrentCapacity);
-      leftSpace = ferryCurrentCapacity;
+    } catch (InterruptedException e) {
+      LOGGER.warn("Something wrong");
+    } finally {
+      reentrantLock.unlock();
     }
-    reentrantLock.unlock();
   }
 
   public void unload() throws InterruptedException {
-    TimeUnit.SECONDS.sleep(3);
     reentrantLock.lock();
-    if (ferryCurrentCapacity == 10) {
-      leftSpace = ferryCurrentCapacity;
-      condition.signalAll();
-    }
-    if (leftSpace < 2) {
-      Car car = carsToLoad.get(carCounter - carsToLoad.size());
-      if (car.getCarType() == CarType.PASSENGER && car.isLoaded()) {
-        ferryCurrentCapacity = ferryCurrentCapacity + 1;
-        carsToLoad.remove(car);
-        carCounter = carCounter - 1;
+    // condition.await();
+    try {
+      int occupiedSpace = updateOccupiedSpace();
+      if (occupiedSpace == 0) {
+        condition.signal();
       }
-      if (car.getCarType() == CarType.TRUCK && car.isLoaded()) {
-        ferryCurrentCapacity = ferryCurrentCapacity + 2;
-        carsToLoad.remove(car);
-        carCounter = carCounter - 1;
+      if (cars.size() != 0) {
+        if (cars.element().isLoaded()) {
+          LOGGER.info("------------------------------------------");
+          LOGGER.info("Car " + cars.element().getCarID() + " was unloaded.");
+          LOGGER.info(
+              "Current ferry capacity = "
+                  + (MAX_CAPACITY - occupiedSpace + cars.element().getCarSize()));
+          LOGGER.info("------------------------------------------");
+        }
+        cars.remove();
       }
-      LOGGER.info("------------------------------------------");
-      LOGGER.info("Car " + car.getCarID() + " was unloaded.");
-      LOGGER.info("Current ferry capacity = " + ferryCurrentCapacity);
-      LOGGER.info("------------------------------------------");
+    } finally {
+      reentrantLock.unlock();
     }
-    reentrantLock.unlock();
   }
 
-  public int getCounter() {
-    return carCounter;
+  private int updateOccupiedSpace() {
+    reentrantLock.lock();
+    try {
+      int occupiedSpace = 0;
+      for (Car car : cars) {
+        occupiedSpace = occupiedSpace + car.getCarSize();
+      }
+      return occupiedSpace;
+    } finally {
+      reentrantLock.unlock();
+    }
   }
 }
