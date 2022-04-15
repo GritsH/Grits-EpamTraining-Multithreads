@@ -38,7 +38,7 @@ public class Ferry {
     try {
       int leftSpace = estimateLeftSpace();
       if (leftSpace < car.getCarSize()) {
-        //setLeftSpace(leftSpace);
+        // setLeftSpace(leftSpace);
         condition.await();
       }
       cars.add(car);
@@ -59,13 +59,11 @@ public class Ferry {
       int leftSpace = estimateLeftSpace();
       if (leftSpace == MAX_CAPACITY) {
         condition.signal();
-      }else {
+      } else {
         if (cars.element().isLoaded()) {
           LOGGER.info("------------------------------------------");
           LOGGER.info("Car " + cars.element().getCarID() + " was unloaded.");
-          LOGGER.info(
-              "Current ferry capacity = "
-                  + (leftSpace + cars.element().getCarSize()));
+          LOGGER.info("Current ferry capacity = " + (leftSpace + cars.element().getCarSize()));
           LOGGER.info("------------------------------------------");
         }
         cars.remove();

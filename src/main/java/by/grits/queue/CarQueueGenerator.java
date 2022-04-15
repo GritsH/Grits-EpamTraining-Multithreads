@@ -33,7 +33,7 @@ public class CarQueueGenerator implements Runnable {
 
   @Override
   public void run() {
-    while(true){
+    while (true) {
       try {
         TimeUnit.SECONDS.sleep(3);
       } catch (InterruptedException e) {
@@ -53,6 +53,5 @@ public class CarQueueGenerator implements Runnable {
       car.setCarID(carID++);
       carQueue.addCarToQueue(car);
     }
-
   }
 }
