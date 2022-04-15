@@ -35,7 +35,7 @@ public class CarQueueGenerator implements Runnable {
   public void run() {
     while(true){
       try {
-        TimeUnit.SECONDS.sleep(4);
+        TimeUnit.SECONDS.sleep(3);
       } catch (InterruptedException e) {
         e.printStackTrace();
       }
