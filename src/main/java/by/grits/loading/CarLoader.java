@@ -18,7 +18,7 @@ public class CarLoader implements Runnable {
   public void run() {
     while (true) {
       try {
-        TimeUnit.SECONDS.sleep(5);
+        TimeUnit.SECONDS.sleep(3);
         ferry.load(carQueue.getNextCar());
       } catch (InterruptedException e) {
         e.printStackTrace();
