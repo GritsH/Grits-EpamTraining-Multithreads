@@ -17,11 +17,13 @@ public class Ferry {
   private final ReentrantLock reentrantLock;
   private final Condition condition;
   private final Queue<Car> cars;
+  private int leftSpace;
 
   private Ferry() {
     reentrantLock = new ReentrantLock();
     condition = reentrantLock.newCondition();
     cars = new LinkedList<>();
+    leftSpace = MAX_CAPACITY;
   }
 
   public static Ferry getInstance() {
@@ -35,7 +37,9 @@ public class Ferry {
     reentrantLock.lock();
     try {
       int occupiedSpace = updateOccupiedSpace();
-      if (MAX_CAPACITY - occupiedSpace < car.getCarSize()) {
+      int leftSpace = MAX_CAPACITY - occupiedSpace;
+      if (leftSpace < car.getCarSize()) {
+        setLeftSpace(leftSpace);
         condition.await();
       }
       if (occupiedSpace >= 0 && occupiedSpace + car.getCarSize() <= MAX_CAPACITY) {
@@ -54,13 +58,13 @@ public class Ferry {
 
   public void unload() throws InterruptedException {
     reentrantLock.lock();
-    // condition.await();
     try {
       int occupiedSpace = updateOccupiedSpace();
       if (occupiedSpace == 0) {
+        setLeftSpace(MAX_CAPACITY);
         condition.signal();
       }
-      if (cars.size() != 0) {
+      if (leftSpace < 2) {
         if (cars.element().isLoaded()) {
           LOGGER.info("------------------------------------------");
           LOGGER.info("Car " + cars.element().getCarID() + " was unloaded.");
@@ -85,6 +89,15 @@ public class Ferry {
       }
       return occupiedSpace;
     } finally {
+      reentrantLock.unlock();
+    }
+  }
+
+  private void setLeftSpace(int leftSpace){
+    reentrantLock.lock();
+    try{
+      this.leftSpace = leftSpace;
+    }finally{
       reentrantLock.unlock();
     }
   }
