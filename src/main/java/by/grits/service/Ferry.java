@@ -16,13 +16,12 @@ public class Ferry {
 
   private static final Integer MAX_CAPACITY = 10;
   private static Ferry INSTANCE;
+  protected final AtomicReference<FerryStateType> state =
+      new AtomicReference<>(FerryStateType.LOADING);
   private final ReentrantLock reentrantLock;
   private final Condition loadCondition;
   private final Condition unloadCondition;
   private final Queue<Car> cars;
-  // true - loading
-  // false - unloading
-  protected final AtomicReference<FerryStateType> state = new AtomicReference<>(FerryStateType.LOADED);
 
   private Ferry() {
     reentrantLock = new ReentrantLock();
@@ -41,22 +40,18 @@ public class Ferry {
   public void load(Car car) throws InterruptedException {
     reentrantLock.lock();
     try {
-      // unloading
-      while (state.get() != FerryStateType.LOADED) {
-        loadCondition.await();
-      }
       if (estimateLeftSpace() < car.getCarSize()) {
         // set to load
-        state.set(FerryStateType.UNLOADED);
+        state.set(FerryStateType.UNLOADING);
         unloadCondition.signal();
-      } else {
-        cars.add(car);
-        car.setLoaded(true);
-        LOGGER.info("Car " + car.getCarID() + " was loaded on ferry");
-        LOGGER.info("Current ferry capacity = " + (estimateLeftSpace()));
+        loadCondition.await();
       }
+      cars.add(car);
+      car.setLoaded(true);
+      LOGGER.info("Car " + car.getCarID() + " was loaded on ferry");
+      LOGGER.info("Current ferry capacity = " + (estimateLeftSpace()));
     } catch (InterruptedException e) {
-      LOGGER.warn("Something wrong");
+      LOGGER.warn("Something wrong", e);
     } finally {
       reentrantLock.unlock();
     }
@@ -66,12 +61,12 @@ public class Ferry {
     reentrantLock.lock();
     try {
       // loading
-      while (state.get() == FerryStateType.LOADED) {
+      while (state.get() == FerryStateType.LOADING) {
         unloadCondition.await();
       }
       int leftSpace = estimateLeftSpace();
       if (leftSpace == MAX_CAPACITY) {
-        state.set(FerryStateType.LOADED);
+        state.set(FerryStateType.LOADING);
         loadCondition.signal();
       } else {
         if (cars.element().isLoaded()) {
